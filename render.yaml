@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: xitter-downloader
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: MAX_DOWNLOAD_MB
+        value: "100"
+      - key: MAX_CONCURRENT_DOWNLOADS
+        value: "5"

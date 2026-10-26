@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xitter Downloader</title>
+<style>
+  :root { --bg:#fff; --fg:#111; --muted:#8a8a8a; --line:#e6e6e6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0b0b0b; --fg:#eee; --muted:#777; --line:#232323; }
+  }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body {
+    margin:0; background:var(--bg); color:var(--fg);
+    font:15px/1.6 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    display:flex; justify-content:center; padding:0 24px;
+  }
+  main { width:100%; max-width:460px; padding-top:22vh; }
+  h1 { margin:0 0 32px; font-size:15px; font-weight:500; letter-spacing:.04em; text-align:center; }
+  form { display:flex; border-bottom:1px solid var(--line); transition:border-color .15s; }
+  form:focus-within { border-color:var(--fg); }
+  input {
+    flex:1; min-width:0; padding:10px 0; border:0; outline:0;
+    background:transparent; color:inherit; font:inherit;
+  }
+  input::placeholder { color:var(--muted); }
+  button {
+    border:0; background:none; color:var(--muted); font:inherit; cursor:pointer; padding:10px 0 10px 12px;
+  }
+  button:hover, button:focus-visible { color:var(--fg); outline:0; }
+  button:disabled { cursor:wait; opacity:.5; }
+  #msg { margin-top:16px; min-height:1.6em; color:var(--muted); font-size:13px; }
+  ul { list-style:none; margin:24px 0 0; padding:0; }
+  li { display:flex; align-items:center; gap:14px; padding:12px 0; border-top:1px solid var(--line); }
+  li:last-child { border-bottom:1px solid var(--line); }
+  li img { width:44px; height:44px; object-fit:cover; background:var(--line); }
+  li span { flex:1; color:var(--muted); font-size:13px; }
+  li a { color:var(--fg); text-decoration:none; border-bottom:1px solid var(--line); }
+  li a:hover { border-color:var(--fg); }
+  footer { position:fixed; bottom:20px; left:0; right:0; text-align:center; color:var(--muted); font-size:12px; font-style:italic; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Xitter Downloader</h1>
+
+  <form id="form" novalidate>
+    <input id="url" type="text" inputmode="url" placeholder="paste an x.com video link" autofocus autocomplete="off" spellcheck="false">
+    <button id="go">fetch →</button>
+  </form>
+  <div id="msg" role="status"></div>
+  <ul id="results"></ul>
+</main>
+<footer>"marjan was here"</footer>
+
+<script>
+const form = document.getElementById("form");
+const input = document.getElementById("url");
+const btn = document.getElementById("go");
+const msg = document.getElementById("msg");
+const list = document.getElementById("results");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (location.protocol === "file:") {
+    msg.textContent = "open this through the server (http://localhost:8000), not as a file";
+    return;
+  }
+  if (!input.value.trim()) {
+    msg.textContent = "paste a link first";
+    return;
+  }
+  msg.textContent = "…";
+  list.replaceChildren();
+  btn.disabled = true;
+  try {
+    const r = await fetch("/api/media?url=" + encodeURIComponent(input.value.trim()));
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || "something went wrong");
+    msg.textContent = "@" + data.author;
+    for (const m of data.media) {
+      const li = document.createElement("li");
+      const img = document.createElement("img");
+      img.src = m.thumb; img.alt = ""; img.referrerPolicy = "no-referrer";
+      const label = document.createElement("span");
+      label.textContent = m.type;
+      const a = document.createElement("a");
+      a.textContent = "download";
+      a.href = "/api/download?url=" + encodeURIComponent(m.url);
+      li.append(img, label, a);
+      list.append(li);
+    }
+  } catch (ex) {
+    msg.textContent = ex.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
